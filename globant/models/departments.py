@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-class Department(Base):
+class Departments(Base):
     __tablename__ = 'departments'
     id = Column(Integer, primary_key=True)
     department = Column(String(50), nullable=False)

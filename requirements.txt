@@ -2,3 +2,4 @@ alembic~=1.5
 mysql-connector-python~=8.0
 sqlalchemy~=1.4
 Flask==3.0.2
+google-cloud-storage==2.7.0

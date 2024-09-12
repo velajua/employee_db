@@ -93,7 +93,6 @@ def load_historic_csv_data_to_db(table_name):
     csv_reader = csv.reader(io.StringIO(blob.download_as_string().decode('utf-8')))
 
     Model, headers = get_model_and_headers(table_name)
-
     data = [dict(zip(headers, row)) for row in csv_reader]
     validated_records, error = validate_and_prepare_records(Model, headers, data)
     print({"message": f"validated records: {len(validated_records)}", "vals": validated_records}, file=sys.stdout)
@@ -125,8 +124,9 @@ def load_data_from_payload(table_name: str):
         return jsonify({"error": "Invalid data format. Expected a list or a single dictionary."}), 400
     if len(data) > 1000:
         return jsonify({"error": "Record limit exceeded. Maximum allowed is 1000 records."}), 400
-
-    validated_records, error = validate_and_prepare_records(table_name, data)
+    
+    Model, headers = get_model_and_headers(table_name)
+    validated_records, error = validate_and_prepare_records(Model, headers, data)
     print({"message": f"validated records: {len(validated_records)}", "vals": validated_records}, file=sys.stdout)
     
     if error:

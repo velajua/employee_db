@@ -13,74 +13,28 @@ from google.cloud import storage
 storage_client = storage.Client()
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import Integer, String, DateTime, Float, Boolean
 
 BASE_PATH = 'database'
 BUCKET_NAME = 'globant-db-test-data'
 
-MYSQL_USER = os.getenv("MYSQL_USER")
-MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD")
-MYSQL_HOST = os.getenv("MYSQL_HOST")
+database_url = URL.create(
+    "mysql+mysqlconnector",
+    username=os.getenv("MYSQL_USER"),
+    password=os.getenv("MYSQL_PASSWORD"),
+    host=os.getenv("MYSQL_HOST"),
+    database="pruebaglobant"
+)
 
-engine = create_engine(f"mysql+mysqlconnector://{MYSQL_USER}:{MYSQL_PASSWORD}@{MYSQL_HOST}/pruebaglobant")
+engine = create_engine(database_url)
 Session = sessionmaker(bind=engine)
 
 
 @app.route('/')
 def index():
     return "Welcome to the Cloud Run migration service!"
-
-
-# @app.route('/load_historic_data/<table_name>', methods=['POST'])
-# def load_historic_csv_data_to_db(table_name):
-#     session = Session()
-
-#     bucket = storage_client.bucket(BUCKET_NAME)
-#     blob = bucket.blob(f"{BASE_PATH}/{table_name}/historic/{table_name}.csv")    
-#     csv_reader = csv.reader(io.StringIO(blob.download_as_string().decode('utf-8')))
-
-#     try:
-#         module_name = f"globant.models.{table_name}"
-#         Model = getattr(importlib.import_module(module_name),
-#                         ''.join([word.capitalize() for word in table_name.split('_')]))
-#         headers = [column.name for column in Model.__table__.columns]
-#     except (ImportError, AttributeError) as e:
-#         return jsonify({"error": f"Unknown table: {table_name}"}), 400
-    
-#     for row in csv_reader:
-#         try:
-#             row_dict = dict(zip(headers, row))            
-#             for column in Model.__table__.columns:
-#                 col_name = column.name
-#                 col_type = column.type
-                
-#                 if col_name in row_dict:
-#                     if isinstance(col_type, Integer):
-#                         row_dict[col_name] = int(row_dict[col_name])
-#                     elif isinstance(col_type, Float):
-#                         row_dict[col_name] = float(row_dict[col_name])
-#                     elif isinstance(col_type, Boolean):
-#                         row_dict[col_name] = bool(int(row_dict[col_name]))
-#                     elif isinstance(col_type, DateTime):
-#                         if "Z" not in row_dict[col_name]:
-#                             dt = datetime.strptime(row_dict[col_name], '%Y-%m-%dT%H:%M:%S')
-#                             row_dict[col_name] = dt.isoformat() + 'Z'
-#                     elif isinstance(col_type, String):
-#                         row_dict[col_name] = str(row_dict[col_name])            
-#             record = Model(**row_dict)
-#             session.add(record)
-#         except Exception as e:
-#             session.rollback()
-#             jsonify({"error": f"Error processing row {row}: {e}"}), 500
-#     try:
-#         session.commit()
-#         return jsonify({"message": f"Data successfully loaded into {table_name}"}), 200
-#     except Exception as e:
-#         session.rollback()
-#         return jsonify({"error": f"Failed to commit transaction: {e}"}), 500
-#     finally:
-#         session.close()
 
 
 def get_model_and_headers(table_name):

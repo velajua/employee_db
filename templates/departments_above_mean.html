@@ -1,0 +1,19 @@
+<!-- departments_above_mean.html -->
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Department</th>
+            <th>Hired</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for row in data %}
+        <tr>
+            <td>{{ row.id }}</td>
+            <td>{{ row.department }}</td>
+            <td>{{ row.hired }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

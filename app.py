@@ -8,7 +8,8 @@ import importlib
 import subprocess
 from datetime import datetime
 
-from flask import Flask, jsonify, request
+from flask import (Flask, jsonify,
+                   request, render_template)
 app = Flask(__name__)
 
 from google.cloud import storage
@@ -46,12 +47,15 @@ def get_model_and_headers(table_name):
     try:
         module_name = f"globant.models.{table_name}"
         Model = getattr(importlib.import_module(module_name),
-                        ''.join([word.capitalize() for word in table_name.split('_')]))
+                        ''.join([word.capitalize()
+                                 for word in table_name.split('_')]))
         headers = [column.name for column in Model.__table__.columns]
         print(f"Loaded model: {table_name}", file=sys.stdout)
         return Model, headers
     except (ImportError, AttributeError) as e:
-        print({"Exception": e, "Traceback": traceback.format_exc()}, file=sys.stderr)
+        print({"Exception": e,
+               "Traceback": traceback.format_exc()},
+               file=sys.stderr)
         return jsonify({"error": f"Unknown table: {table_name}"}), 400
     
 
@@ -73,10 +77,12 @@ def validate_and_prepare_records(Model, headers, data):
                         row_dict[col_name] = bool(int(row_dict[col_name]))
                     elif 'datetime' in col_name:
                         if "Z" not in row_dict[col_name]:
-                            dt = datetime.strptime(row_dict[col_name], '%Y-%m-%dT%H:%M:%S')
+                            dt = datetime.strptime(row_dict[col_name],
+                                                   '%Y-%m-%dT%H:%M:%S')
                             row_dict[col_name] = str(dt.isoformat() + 'Z')
                         else:
-                            dt = datetime.strptime(row_dict[col_name], '%Y-%m-%dT%H:%M:%SZ')
+                            dt = datetime.strptime(row_dict[col_name],
+                                                   '%Y-%m-%dT%H:%M:%SZ')
                             row_dict[col_name] = str(dt.isoformat() + 'Z')
                     elif isinstance(col_type, String):
                         row_dict[col_name] = str(row_dict[col_name])
@@ -92,11 +98,14 @@ def load_historic_csv_data_to_db(table_name):
     session = Session()
     bucket = storage_client.bucket(BUCKET_NAME)
     blob = bucket.blob(f"{BASE_PATH}/{table_name}/historic/{table_name}.csv")
-    csv_reader = csv.reader(io.StringIO(blob.download_as_string().decode('utf-8')))
+    csv_reader = csv.reader(
+        io.StringIO(blob.download_as_string().decode('utf-8')))
     Model, headers = get_model_and_headers(table_name)
     data = [dict(zip(headers, row)) for row in csv_reader]
-    validated_records, error = validate_and_prepare_records(Model, headers, data)
-    print({"validated records": validated_records, "error": error}, file=sys.stdout)
+    validated_records, error = validate_and_prepare_records(
+        Model, headers, data)
+    print({"validated records": validated_records,
+           "error": error}, file=sys.stdout)
     if error:
         return jsonify({"error": error}), 400
     try:
@@ -106,7 +115,8 @@ def load_historic_csv_data_to_db(table_name):
         return jsonify({"message": f"Data successfully loaded into {table_name}"}), 200
     except Exception as e:
         session.rollback()
-        print({"Exception": e, "Traceback": traceback.format_exc()}, file=sys.stderr)
+        print({"Exception": e,
+               "Traceback": traceback.format_exc()}, file=sys.stderr)
         return jsonify({"error": f"Failed to commit transaction: {e}"}), 500
     finally:
         session.close()
@@ -213,7 +223,8 @@ def restore_backup_from_avro(table_name):
                         elif isinstance(col_type, Boolean):
                             row_dict[col_name] = bool(avro_record[col_name])
                         elif isinstance(col_type, DateTime):
-                            row_dict[col_name] = datetime.fromisoformat(avro_record[col_name].replace("Z", ""))
+                            row_dict[col_name] = datetime.fromisoformat(
+                                avro_record[col_name].replace("Z", ""))
                         else:
                             row_dict[col_name] = avro_record[col_name]
                 record = Model(**row_dict)
@@ -243,6 +254,66 @@ def run_migration():
     except subprocess.CalledProcessError as e:
         print({"Exception": e, "Traceback": traceback.format_exc()}, file=sys.stderr)
         return jsonify({"error": "verify logs for error"}), 500
+
+
+@app.route('/hired_by_quarter/<year>', methods=['POST'])
+def hired_by_quarter(year):
+    session = Session()
+    query = f"""
+        SELECT d.department, j.job, 
+               SUM(CASE WHEN QUARTER(h.datetime) = 1 THEN 1 ELSE 0 END) AS Q1,
+               SUM(CASE WHEN QUARTER(h.datetime) = 2 THEN 1 ELSE 0 END) AS Q2,
+               SUM(CASE WHEN QUARTER(h.datetime) = 3 THEN 1 ELSE 0 END) AS Q3,
+               SUM(CASE WHEN QUARTER(h.datetime) = 4 THEN 1 ELSE 0 END) AS Q4
+        FROM hired_employees h
+        LEFT JOIN departments d ON h.department_id = d.id
+        LEFT JOIN jobs j ON h.job_id = j.id
+        WHERE YEAR(h.datetime) = {year}
+        GROUP BY d.department, j.job
+        ORDER BY d.department ASC, j.job ASC;
+    """
+    result = session.execute(query).fetchall()
+    session.close()
+    return render_template('hired_by_quarter.html', data=result)
+
+
+@app.route('/departments_above_mean/<year>', methods=['GET'])
+def departments_above_mean(year):
+    session = Session()
+    query = f"""
+        WITH dept_hires AS (
+            SELECT d.id, d.department, COUNT(h.id) AS hired
+            FROM hired_employees h
+            LEFT JOIN departments d ON h.department_id = d.id
+            WHERE YEAR(h.datetime) = {year}
+            GROUP BY d.id, d.department
+        ),
+        dept_mean AS (
+            SELECT AVG(hired) AS mean_hired
+            FROM dept_hires
+        )
+        SELECT dh.id, dh.department, dh.hired
+        FROM dept_hires dh
+        CROSS JOIN dept_mean dm
+        WHERE dh.hired > dm.mean_hired
+        ORDER BY dh.hired DESC;
+    """
+    result = session.execute(query).fetchall()
+    session.close()
+    return render_template('departments_above_mean.html', data=result)
+
+
+@app.route('/sitemap.xml', methods=['GET'])
+def sitemap():
+    output = []
+    for rule in app.url_map.iter_rules():
+        methods = ', '.join(rule.methods - {'HEAD', 'OPTIONS'})
+        output.append({
+            "endpoint": rule.endpoint,
+            "methods": methods,
+            "url": rule.rule
+        })
+    return jsonify(output), 200
 
 
 if __name__ == '__main__':

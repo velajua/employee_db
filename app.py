@@ -256,7 +256,7 @@ def run_migration():
         return jsonify({"error": "verify logs for error"}), 500
 
 
-@app.route('/hired_by_quarter/<year>', methods=['POST'])
+@app.route('/hired_by_quarter/<year>', methods=['GET'])
 def hired_by_quarter(year):
     session = Session()
     query = f"""

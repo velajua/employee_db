@@ -7,6 +7,7 @@ Base = declarative_base()
 
 class HiredEmployees(Base):
     __tablename__ = 'hired_employees'
+    __table_args__= {'schema':'pruebaglobant'}
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
     datetime = Column(DateTime, nullable=False)

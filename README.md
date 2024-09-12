@@ -107,6 +107,7 @@ Alembic Configuration (Sample):
 
 ```python
 [alembic]
+
 script_location = globant/alembic
 
 sqlalchemy.url = mysql+mysqlconnector://<MYSQL_USER>:<MYSQL_PASSWORD>@<MYSQL_HOST>/pruebaglobant

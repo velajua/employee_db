@@ -30,8 +30,8 @@ def upgrade():
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('name', sa.String(100), nullable=False),
         sa.Column('datetime', sa.DateTime, nullable=False),
-        sa.Column('department_id', sa.Integer, sa.ForeignKey('departments.id'), nullable=False),
-        sa.Column('job_id', sa.Integer, sa.ForeignKey('jobs.id'), nullable=False),
+        sa.Column('department_id', sa.Integer, sa.ForeignKey('pruebaglobant.departments.id'), nullable=False),
+        sa.Column('job_id', sa.Integer, sa.ForeignKey('pruebaglobant.jobs.id'), nullable=False),
     )
 
 

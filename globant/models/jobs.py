@@ -7,6 +7,5 @@ Base = declarative_base()
 
 class Jobs(Base):
     __tablename__ = 'jobs'
-    __table_args__= {'schema':'pruebaglobant'}
     id = Column(Integer, primary_key=True)
     job = Column(String(50), nullable=False)

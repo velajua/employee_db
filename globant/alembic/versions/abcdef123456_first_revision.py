@@ -19,26 +19,23 @@ def upgrade():
         'departments',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('department', sa.String(50), nullable=False),
-        schema='pruebaglobant',
     )
     op.create_table(
         'jobs',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('job', sa.String(50), nullable=False),
-        schema='pruebaglobant',
     )
     op.create_table(
         'hired_employees',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('name', sa.String(100), nullable=False),
         sa.Column('datetime', sa.DateTime, nullable=False),
-        sa.Column('department_id', sa.Integer, sa.ForeignKey('pruebaglobant.departments.id'), nullable=False),
-        sa.Column('job_id', sa.Integer, sa.ForeignKey('pruebaglobant.jobs.id'), nullable=False),
-        schema='pruebaglobant',
+        sa.Column('department_id', sa.Integer, nullable=False),
+        sa.Column('job_id', sa.Integer, nullable=False),
     )
 
 
 def downgrade():
-    op.drop_table('hired_employees', schema='pruebaglobant')
-    op.drop_table('jobs', schema='pruebaglobant')
-    op.drop_table('departments', schema='pruebaglobant')
+    op.drop_table('hired_employees')
+    op.drop_table('jobs')
+    op.drop_table('departments')

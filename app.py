@@ -95,7 +95,7 @@ def load_historic_csv_data_to_db(table_name):
     Model, headers = get_model_and_headers(table_name)
     data = [dict(zip(headers, row)) for row in csv_reader]
     validated_records, error = validate_and_prepare_records(Model, headers, data)
-    print({"message": f"validated records: {len(validated_records)}", "vals": validated_records}, file=sys.stdout)
+    print({"validated records": validated_records, "error": error}, file=sys.stdout)
 
     if error:
         return jsonify({"error": error}), 400
@@ -127,7 +127,7 @@ def load_data_from_payload(table_name: str):
     
     Model, headers = get_model_and_headers(table_name)
     validated_records, error = validate_and_prepare_records(Model, headers, data)
-    print({"message": f"validated records: {len(validated_records)}", "vals": validated_records}, file=sys.stdout)
+    print({"validated records": validated_records, "error": error}, file=sys.stdout)
     
     if error:
         return jsonify({"error": error}), 400

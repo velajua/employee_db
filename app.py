@@ -80,7 +80,7 @@ def validate_and_prepare_records(Model, headers, data):
             record = Model(**row_dict)
             validated_records.append(record)
         except Exception as e:
-            return None, f"Error processing row {row_dict}: {e}"
+            print(f"Error processing row {row_dict}: {e}", file=sys.stdout)
     return validated_records, None
 
 

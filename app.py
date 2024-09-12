@@ -21,11 +21,12 @@ from sqlalchemy import Integer, String, DateTime, Float, Boolean
 BASE_PATH = 'database'
 BUCKET_NAME = 'globant-db-test-data'
 
+host, port = os.getenv("MYSQL_HOST").split(':')
 database_url = URL.create(
     "mysql+mysqlconnector",
     username=os.getenv("MYSQL_USER"),
-    password=os.getenv("MYSQL_PASSWORD"),
-    host=os.getenv("MYSQL_HOST"),
+    host=host,
+    port=int(port),
     database="pruebaglobant"
 )
 

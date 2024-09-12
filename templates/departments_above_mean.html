@@ -1,19 +1,44 @@
-<!-- departments_above_mean.html -->
-<table>
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Department</th>
-            <th>Hired</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in data %}
-        <tr>
-            <td>{{ row.id }}</td>
-            <td>{{ row.department }}</td>
-            <td>{{ row.hired }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Departments Above Mean Hires</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h2>Departments Above Mean Hires</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Department</th>
+                <th>Hired</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.department }}</td>
+                <td>{{ row.hired }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

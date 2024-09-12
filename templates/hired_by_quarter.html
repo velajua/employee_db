@@ -1,25 +1,33 @@
-<!-- hired_by_quarter.html -->
-<table>
-    <thead>
-        <tr>
-            <th>Department</th>
-            <th>Job</th>
-            <th>Q1</th>
-            <th>Q2</th>
-            <th>Q3</th>
-            <th>Q4</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for row in data %}
-        <tr>
-            <td>{{ row.department }}</td>
-            <td>{{ row.job }}</td>
-            <td>{{ row.Q1 }}</td>
-            <td>{{ row.Q2 }}</td>
-            <td>{{ row.Q3 }}</td>
-            <td>{{ row.Q4 }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hires by Quarter</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h2>Hires by Quarter</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Department</th>
+                <th>Job</th>
+                <th>Q1</th>
+                <th>Q2</th>
+                <th>Q3</th>
+               

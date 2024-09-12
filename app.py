@@ -71,10 +71,13 @@ def validate_and_prepare_records(Model, headers, data):
                         row_dict[col_name] = float(row_dict[col_name])
                     elif isinstance(col_type, Boolean):
                         row_dict[col_name] = bool(int(row_dict[col_name]))
-                    elif isinstance(col_type, DateTime):
+                    elif 'datetime' in col_name:
                         if "Z" not in row_dict[col_name]:
                             dt = datetime.strptime(row_dict[col_name], '%Y-%m-%dT%H:%M:%S')
-                            row_dict[col_name] = dt.isoformat() + 'Z'
+                            row_dict[col_name] = str(dt.isoformat() + 'Z')
+                        else:
+                            dt = datetime.strptime(row_dict[col_name], '%Y-%m-%dT%H:%M:%SZ')
+                            row_dict[col_name] = str(dt.isoformat() + 'Z')
                     elif isinstance(col_type, String):
                         row_dict[col_name] = str(row_dict[col_name])
             record = Model(**row_dict)

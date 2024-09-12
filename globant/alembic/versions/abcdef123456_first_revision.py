@@ -29,7 +29,7 @@ def upgrade():
         'hired_employees',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('name', sa.String(100), nullable=False),
-        sa.Column('datetime', sa.DateTime, nullable=False),
+        sa.Column('datetime', sa.String(100), nullable=False),
         sa.Column('department_id', sa.Integer, nullable=False),
         sa.Column('job_id', sa.Integer, nullable=False),
     )

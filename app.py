@@ -156,12 +156,18 @@ def backup_table_to_avro(table_name):
                 {"name": column.name, "type": "int"} if column.type.python_type == int else
                 {"name": column.name, "type": "float"} if column.type.python_type == float else
                 {"name": column.name, "type": "boolean"} if column.type.python_type == bool else
-                {"name": column.name, "type": "null"} for column in Model.__table__.columns
+                {"name": column.name, "type": ["null", "string"]} for column in Model.__table__.columns
             ]
         }
         avro_records = []
         for record in records:
-            avro_record = {header: str(getattr(record, header)) for header in headers}
+            avro_record = {}
+            for header in headers:
+                value = getattr(record, header)
+                if isinstance(value, (int, float, bool)) or value is None:
+                    avro_record[header] = value
+                else:
+                    avro_record[header] = str(value)
             avro_records.append(avro_record)
         with io.BytesIO() as buffer:
             fastavro.writer(buffer, avro_schema, avro_records)

@@ -94,7 +94,8 @@ def load_historic_csv_data_to_db(table_name):
 
     data = [dict(zip(headers, row)) for row in csv_reader]
     validated_records, error = validate_and_prepare_records(Model, headers, data)
-    
+    print({"message": f"validated records: {len(validated_records)}", "vals": validated_records}, file=sys.stdout)
+
     if error:
         return jsonify({"error": error}), 400
 
@@ -105,6 +106,7 @@ def load_historic_csv_data_to_db(table_name):
         return jsonify({"message": f"Data successfully loaded into {table_name}"}), 200
     except Exception as e:
         session.rollback()
+        print({"Exception": e, "Traceback": traceback.format_exc()}, file=sys.stderr)
         return jsonify({"error": f"Failed to commit transaction: {e}"}), 500
     finally:
         session.close()
@@ -123,6 +125,7 @@ def load_data_from_payload(table_name: str):
         return jsonify({"error": "Record limit exceeded. Maximum allowed is 1000 records."}), 400
 
     validated_records, error = validate_and_prepare_records(table_name, data)
+    print({"message": f"validated records: {len(validated_records)}", "vals": validated_records}, file=sys.stdout)
     
     if error:
         return jsonify({"error": error}), 400
@@ -134,6 +137,7 @@ def load_data_from_payload(table_name: str):
         return jsonify({"message": f"Data successfully loaded into {table_name}"}), 200
     except Exception as e:
         session.rollback()
+        print({"Exception": e, "Traceback": traceback.format_exc()}, file=sys.stderr)
         return jsonify({"error": f"Failed to commit transaction: {e}"}), 500
     finally:
         session.close()

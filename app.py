@@ -2,6 +2,7 @@ import io
 import os
 import csv
 import sys
+import fastavro
 import traceback
 import importlib
 import subprocess
@@ -16,7 +17,8 @@ storage_client = storage.Client()
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import URL
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import Integer, String, DateTime, Float, Boolean
+from sqlalchemy import (Integer, String,
+                        Float, Boolean, DateTime)
 
 BASE_PATH = 'database'
 BUCKET_NAME = 'globant-db-test-data'
@@ -57,13 +59,11 @@ def validate_and_prepare_records(Model, headers, data):
     if Model is None:
         return None, headers
     validated_records = []
-
     for row_dict in data:
         try:
             for column in Model.__table__.columns:
                 col_name = column.name
                 col_type = column.type
-
                 if col_name in row_dict:
                     if isinstance(col_type, Integer):
                         row_dict[col_name] = int(row_dict[col_name])
@@ -90,19 +90,15 @@ def validate_and_prepare_records(Model, headers, data):
 @app.route('/load_historic_data/<table_name>', methods=['POST'])
 def load_historic_csv_data_to_db(table_name):
     session = Session()
-
     bucket = storage_client.bucket(BUCKET_NAME)
     blob = bucket.blob(f"{BASE_PATH}/{table_name}/historic/{table_name}.csv")
     csv_reader = csv.reader(io.StringIO(blob.download_as_string().decode('utf-8')))
-
     Model, headers = get_model_and_headers(table_name)
     data = [dict(zip(headers, row)) for row in csv_reader]
     validated_records, error = validate_and_prepare_records(Model, headers, data)
     print({"validated records": validated_records, "error": error}, file=sys.stdout)
-
     if error:
         return jsonify({"error": error}), 400
-
     try:
         for record in validated_records:
             session.add(record)
@@ -119,7 +115,6 @@ def load_historic_csv_data_to_db(table_name):
 @app.route('/load_data_from_payload/<table_name>', methods=['POST'])
 def load_data_from_payload(table_name: str):
     session = Session()
-
     data = request.get_json()
     if isinstance(data, dict):
         data = [data]
@@ -127,14 +122,11 @@ def load_data_from_payload(table_name: str):
         return jsonify({"error": "Invalid data format. Expected a list or a single dictionary."}), 400
     if len(data) > 1000:
         return jsonify({"error": "Record limit exceeded. Maximum allowed is 1000 records."}), 400
-    
     Model, headers = get_model_and_headers(table_name)
     validated_records, error = validate_and_prepare_records(Model, headers, data)
     print({"validated records": validated_records, "error": error}, file=sys.stdout)
-    
     if error:
         return jsonify({"error": error}), 400
-
     try:
         for record in validated_records:
             session.add(record)
@@ -144,6 +136,92 @@ def load_data_from_payload(table_name: str):
         session.rollback()
         print({"Exception": e, "Traceback": traceback.format_exc()}, file=sys.stderr)
         return jsonify({"error": f"Failed to commit transaction: {e}"}), 500
+    finally:
+        session.close()
+
+
+@app.route('/backup_table/<table_name>', methods=['POST'])
+def backup_table_to_avro(table_name):
+    session = Session()
+    try:
+        Model, headers = get_model_and_headers(table_name)
+        records = session.query(Model).all()
+        if not records:
+            return jsonify({"error": f"No data found in table {table_name}"}), 404
+        avro_schema = {
+            "type": "record",
+            "name": f"{table_name}_record",
+            "fields": [
+                {"name": column.name, "type": "string"} if column.type.python_type == str else
+                {"name": column.name, "type": "int"} if column.type.python_type == int else
+                {"name": column.name, "type": "float"} if column.type.python_type == float else
+                {"name": column.name, "type": "boolean"} if column.type.python_type == bool else
+                {"name": column.name, "type": "null"} for column in Model.__table__.columns
+            ]
+        }
+        avro_records = []
+        for record in records:
+            avro_record = {header: str(getattr(record, header)) for header in headers}
+            avro_records.append(avro_record)
+        with io.BytesIO() as buffer:
+            fastavro.writer(buffer, avro_schema, avro_records)
+            avro_data = buffer.getvalue()
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(f"{BASE_PATH}/{table_name}/backup/{table_name}.avro")
+        blob.upload_from_string(avro_data, content_type='application/octet-stream')
+        return jsonify({"message": f"Backup for table {table_name} created successfully in Avro format."}), 200
+    except (ImportError, AttributeError) as e:
+        print({"traceback": traceback.format_exc()}, file=sys.stderr)
+        return jsonify({"error": f"Unknown table: {table_name}"}), 400
+    except Exception as e:
+        print({"traceback": traceback.format_exc()}, file=sys.stderr)
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+    finally:
+        session.close()
+
+
+@app.route('/restore_backup/<table_name>', methods=['POST'])
+def restore_backup_from_avro(table_name):
+    session = Session()
+    try:
+        bucket = storage_client.bucket(BUCKET_NAME)
+        blob = bucket.blob(f"{BASE_PATH}/{table_name}/backup/{table_name}.avro")
+        if not blob.exists():
+            return jsonify({"error": f"Backup file for table {table_name} not found"}), 404
+        avro_data = io.BytesIO(blob.download_as_bytes())
+        Model, _ = get_model_and_headers(table_name)
+        with io.BytesIO(avro_data.read()) as buffer:
+            buffer.seek(0)
+            reader = fastavro.reader(buffer)
+            records = []
+            for avro_record in reader:
+                row_dict = {}
+                for column in Model.__table__.columns:
+                    col_name = column.name
+                    col_type = column.type        
+                    if col_name in avro_record:
+                        if isinstance(col_type, Integer):
+                            row_dict[col_name] = int(avro_record[col_name])
+                        elif isinstance(col_type, Float):
+                            row_dict[col_name] = float(avro_record[col_name])
+                        elif isinstance(col_type, Boolean):
+                            row_dict[col_name] = bool(avro_record[col_name])
+                        elif isinstance(col_type, DateTime):
+                            row_dict[col_name] = datetime.fromisoformat(avro_record[col_name].replace("Z", ""))
+                        else:
+                            row_dict[col_name] = avro_record[col_name]
+                record = Model(**row_dict)
+                records.append(record)
+        session.bulk_save_objects(records)
+        session.commit()
+        return jsonify({"message": f"Data successfully restored into {table_name}"}), 200
+    except (ImportError, AttributeError) as e:
+        print({"traceback": traceback.format_exc()}, file=sys.stderr)
+        return jsonify({"error": f"Unknown table: {table_name}"}), 400
+    except Exception as e:
+        session.rollback()
+        print({"traceback": traceback.format_exc()}, file=sys.stderr)
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
     finally:
         session.close()
 

@@ -43,9 +43,11 @@ def get_model_and_headers(table_name):
         Model = getattr(importlib.import_module(module_name),
                         ''.join([word.capitalize() for word in table_name.split('_')]))
         headers = [column.name for column in Model.__table__.columns]
+        print(f"Loaded model: {table_name}", file=sys.stdout)
         return Model, headers
     except (ImportError, AttributeError) as e:
-        return None, jsonify({"error": f"Unknown table: {table_name}"}), 400
+        print({"stdout": e.stdout, "stderr": e.stderr}, file=sys.stderr)
+        return jsonify({"error": f"Unknown table: {table_name}"}), 400
     
 
 def validate_and_prepare_records(Model, headers, data):
@@ -80,7 +82,7 @@ def validate_and_prepare_records(Model, headers, data):
 
 
 @app.route('/load_historic_data/<table_name>', methods=['POST'])
-def load_historic_csv_data_to_db(table_name: str):
+def load_historic_csv_data_to_db(table_name):
     session = Session()
 
     bucket = storage_client.bucket(BUCKET_NAME)

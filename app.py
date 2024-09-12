@@ -2,6 +2,7 @@ import io
 import os
 import csv
 import sys
+import traceback
 import importlib
 import subprocess
 from datetime import datetime
@@ -46,7 +47,7 @@ def get_model_and_headers(table_name):
         print(f"Loaded model: {table_name}", file=sys.stdout)
         return Model, headers
     except (ImportError, AttributeError) as e:
-        print({"stdout": e.stdout, "stderr": e.stderr}, file=sys.stderr)
+        print({"Exception": e, "Traceback": traceback.format_exc()}, file=sys.stderr)
         return jsonify({"error": f"Unknown table: {table_name}"}), 400
     
 
@@ -147,7 +148,7 @@ def run_migration():
         )
         return jsonify({"message": "Migration successful!", "output": result.stdout}), 200
     except subprocess.CalledProcessError as e:
-        print({"stdout": e.stdout, "stderr": e.stderr}, file=sys.stderr)
+        print({"Exception": e, "Traceback": traceback.format_exc()}, file=sys.stderr)
         return jsonify({"error": "verify logs for error"}), 500
 
 

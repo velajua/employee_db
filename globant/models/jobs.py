@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-class Job(Base):
+class Jobs(Base):
     __tablename__ = 'jobs'
     id = Column(Integer, primary_key=True)
     job = Column(String(50), nullable=False)
